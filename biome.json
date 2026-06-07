@@ -1,0 +1,21 @@
+{
+	"$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+	"files": { "includes": ["**", "!sst-env.d.ts"] },
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"formatter": {
+		"includes": ["**", "!./static/"]
+	},
+	"css": {
+		"parser": { "tailwindDirectives": true }
+	},
+	"html": {
+		"experimentalFullSupportEnabled": true,
+		"formatter": {
+			"enabled": true
+		}
+	}
+}
