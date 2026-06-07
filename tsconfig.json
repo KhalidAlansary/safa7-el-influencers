@@ -1,16 +1,27 @@
 {
+	"$schema": "https://json.schemastore.org/tsconfig",
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
+		// Default `sv create` options
 		"rewriteRelativeImportExtensions": true,
-		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
 		"skipLibCheck": true,
 		"sourceMap": true,
-		"strict": true,
-		"moduleResolution": "bundler"
+
+		// Missing features in biome's experimental svelte support
+		"noUnusedLocals": true,
+
+		// Extra safety
+		"noUncheckedIndexedAccess": true,
+		"noPropertyAccessFromIndexSignature": true,
+
+		// Avoid using typescript-specific features
+		"erasableSyntaxOnly": true,
+
+		// jic oop is used
+		"noImplicitOverride": true
 	}
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
