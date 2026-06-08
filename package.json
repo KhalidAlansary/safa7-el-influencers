@@ -13,6 +13,7 @@
 		"lint": "biome check --error-on-warnings",
 		"lint:fix": "biome check --write"
 	},
+	"packageManager": "pnpm@11.3.0",
 	"dependencies": {
 		"sst": "4.15.2",
 		"svelte-kit-sst": "2.43.5"
