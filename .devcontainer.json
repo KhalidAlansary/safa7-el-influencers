@@ -1,0 +1,15 @@
+{
+	"$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+	"image": "mcr.microsoft.com/devcontainers/typescript-node",
+	"postCreateCommand": "pnpm install",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"biomejs.biome",
+				"bradlc.vscode-tailwindcss",
+				"svelte.svelte-vscode"
+			]
+		}
+	},
+	"forwardPorts": [4173, 5173]
+}
