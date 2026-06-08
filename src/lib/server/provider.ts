@@ -24,11 +24,11 @@ export interface DataProvider {
 // object with a 'data' property". The `run-sync-get-dataset-items` endpoint
 // runs the actor and returns the dataset items as JSON in a single request.
 //
-// ⚠️ FIELD MAPPING UNVERIFIED: the field names below are from the actor's
-// documented output schema but have NOT yet been confirmed against a live run
-// (needs the Apify token). The view-count field in particular (`videoPlayCount`
-// vs `videoViewCount`) must be checked — it's the metric the whole product
-// hinges on. Verify, then delete this notice.
+// Field mapping VERIFIED against a live run (natgeo, 2026-06): profile fields
+// and `latestPosts` are as below. The view count lives in `videoViewCount`
+// (`videoPlayCount` is not populated by this actor version). `type` is
+// "Image" | "Video" | "Sidecar". `businessCategoryName` can be the literal
+// string "None".
 // ---------------------------------------------------------------------------
 
 const ACTOR_ID = "apify/instagram-scraper";
@@ -77,7 +77,10 @@ function mapPost(raw: RawPost): Post | null {
 				? "carousel"
 				: "photo";
 	const isVideo = kind === "video";
-	const views = raw.videoPlayCount ?? raw.videoViewCount ?? null;
+	// `videoViewCount` is the field this actor populates; `videoPlayCount` is a
+	// fallback for other actor versions. Keep null when genuinely missing — do
+	// NOT coerce to 0, or videos with no view data would drag the stat down.
+	const views = raw.videoViewCount ?? raw.videoPlayCount ?? null;
 
 	return {
 		id: raw.id ?? raw.shortCode ?? "",
@@ -89,7 +92,7 @@ function mapPost(raw: RawPost): Post | null {
 		thumbnailUrl: raw.displayUrl ?? null,
 		likes: raw.likesCount ?? 0,
 		comments: raw.commentsCount ?? 0,
-		views: isVideo ? (views ?? 0) : null,
+		views: isVideo ? views : null,
 		postedAt: raw.timestamp ?? "",
 		hashtags: raw.hashtags ?? [],
 	};
@@ -104,7 +107,11 @@ function mapProfile(raw: RawDetails): Profile {
 		externalUrl: raw.externalUrl ?? null,
 		verified: raw.verified ?? false,
 		isBusinessAccount: raw.isBusinessAccount ?? false,
-		category: raw.businessCategoryName ?? null,
+		// The actor returns the string "None" rather than null when there's no category.
+		category:
+			raw.businessCategoryName && raw.businessCategoryName !== "None"
+				? raw.businessCategoryName
+				: null,
 		followers: raw.followersCount ?? 0,
 		following: raw.followsCount ?? 0,
 		postsCount: raw.postsCount ?? 0,

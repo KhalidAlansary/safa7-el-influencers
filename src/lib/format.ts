@@ -13,6 +13,17 @@ export function full(n: number): string {
 	return new Intl.NumberFormat("en").format(Math.round(n));
 }
 
+/**
+ * A percentage with enough precision to stay meaningful for huge accounts,
+ * whose engagement rate can be a tiny fraction of a percent. e.g. 0.017 -> "0.017%".
+ */
+export function pct(n: number): string {
+	if (n === 0) return "0%";
+	if (n < 0.1) return `${n.toFixed(3)}%`;
+	if (n < 1) return `${n.toFixed(2)}%`;
+	return `${n.toFixed(1)}%`;
+}
+
 /** A relative-ish "as of" string from an ISO timestamp. */
 export function asOf(iso: string): string {
 	const d = new Date(iso);

@@ -51,7 +51,8 @@ export function tierOf(followers: number): Tier {
 	if (followers < 100_000) return "micro";
 	if (followers < 500_000) return "mid";
 	if (followers < 1_000_000) return "macro";
-	return "mega";
+	if (followers < 10_000_000) return "mega";
+	return "celebrity";
 }
 
 const TIER_LABELS: Record<Tier, string> = {
@@ -59,46 +60,54 @@ const TIER_LABELS: Record<Tier, string> = {
 	micro: "Micro-influencer",
 	mid: "Mid-tier influencer",
 	macro: "Macro-influencer",
-	mega: "Mega-influencer / celebrity",
+	mega: "Mega-influencer",
+	celebrity: "Celebrity / huge account",
 };
 
-// Engagement-rate benchmarks shift by audience size: smaller accounts naturally
-// engage harder. These thresholds are the "good for your size" lines (in %).
-function engagementVerdict(rate: number, tier: Tier): string {
-	const strongAt: Record<Tier, number> = {
-		nano: 5,
-		micro: 3.5,
-		mid: 2.5,
-		macro: 1.8,
-		mega: 1.2,
-	};
-	const okAt: Record<Tier, number> = {
-		nano: 2.5,
-		micro: 1.8,
-		mid: 1.2,
-		macro: 0.9,
-		mega: 0.6,
-	};
-	if (rate >= strongAt[tier]) return "Strong";
-	if (rate >= okAt[tier]) return "Solid";
-	if (rate >= okAt[tier] / 2) return "Average";
-	return "Low";
+// Typical engagement rate (%) for each audience size. Engagement % falls sharply
+// as accounts grow — a nano account beating 4% is normal, while a celebrity
+// account sits well under 1%. We label each account RELATIVE to this benchmark
+// so a huge account isn't unfairly called "low".
+const TYPICAL_ENGAGEMENT: Record<Tier, number> = {
+	nano: 4.0,
+	micro: 2.5,
+	mid: 1.5,
+	macro: 1.0,
+	mega: 0.6,
+	celebrity: 0.15,
+};
+
+/** Compare an account's engagement to what's typical for its own size bracket. */
+function engagementStanding(
+	rate: number,
+	tier: Tier,
+): { label: string; tone: "good" | "ok" | "weak" } {
+	const benchmark = TYPICAL_ENGAGEMENT[tier];
+	const ratio = benchmark > 0 ? rate / benchmark : 0;
+	if (ratio >= 2)
+		return { label: "Well above average for its size", tone: "good" };
+	if (ratio >= 1.25)
+		return { label: "Above average for its size", tone: "good" };
+	if (ratio >= 0.6) return { label: "About average for its size", tone: "ok" };
+	if (ratio >= 0.3)
+		return { label: "Below average for its size", tone: "weak" };
+	return { label: "Well below average for its size", tone: "weak" };
 }
 
 function buildVerdict(profile: Profile, m: Metrics): Verdict {
 	const tier = tierOf(profile.followers);
-	const engagementLabel = engagementVerdict(m.engagementRate, tier);
+	const standing = engagementStanding(m.engagementRate, tier);
 
 	const strengths: string[] = [];
 	const cautions: string[] = [];
 
-	if (engagementLabel === "Strong" || engagementLabel === "Solid") {
+	if (standing.tone === "good") {
 		strengths.push(
-			`Their audience interacts a lot — about ${m.engagementRate.toFixed(1)} out of every 100 followers engage with each post.`,
+			"Their audience engages more than is typical for an account this size.",
 		);
-	} else {
+	} else if (standing.tone === "weak") {
 		cautions.push(
-			`Engagement is on the ${engagementLabel.toLowerCase()} side for this size — roughly ${m.engagementRate.toFixed(1)} in 100 followers interact per post.`,
+			"Their audience engages less than is typical for an account this size.",
 		);
 	}
 
@@ -126,7 +135,7 @@ function buildVerdict(profile: Profile, m: Metrics): Verdict {
 	const summary =
 		`${profile.fullName || profile.username} is a ${TIER_LABELS[tier].toLowerCase()} ` +
 		`with ${profile.followers.toLocaleString()} followers. ` +
-		`Engagement looks ${engagementLabel.toLowerCase()} for an account this size` +
+		`Audience engagement is ${standing.label.toLowerCase()}` +
 		(m.avgViews
 			? `, and recent videos pull around ${Math.round(m.avgViews).toLocaleString()} views each.`
 			: ".");
@@ -134,7 +143,8 @@ function buildVerdict(profile: Profile, m: Metrics): Verdict {
 	return {
 		tier,
 		tierLabel: TIER_LABELS[tier],
-		engagementLabel,
+		engagementLabel: standing.label,
+		engagementTone: standing.tone,
 		summary,
 		strengths,
 		cautions,
@@ -144,8 +154,14 @@ function buildVerdict(profile: Profile, m: Metrics): Verdict {
 export function computeMetrics(profile: Profile, posts: Post[]): Metrics {
 	const likes = posts.map((p) => p.likes);
 	const comments = posts.map((p) => p.comments);
-	const videos = posts.filter((p) => p.views != null);
-	const views = videos.map((p) => p.views as number);
+	// "Video by content type" vs. "video we actually have a view count for" are
+	// kept separate: content-mix uses the former, view stats use the latter, so
+	// missing view data never distorts the typical-views number.
+	const videoPosts = posts.filter((p) => p.kind === "video");
+	const withViews = posts.filter(
+		(p): p is Post & { views: number } => p.views != null,
+	);
+	const views = withViews.map((p) => p.views);
 
 	const avgLikes = mean(likes);
 	const avgComments = mean(comments);
@@ -156,12 +172,10 @@ export function computeMetrics(profile: Profile, posts: Post[]): Metrics {
 			: 0;
 
 	const engagementPerView =
-		views.length > 0
+		withViews.length > 0
 			? mean(
-					videos.map((p) =>
-						(p.views as number) > 0
-							? (p.likes + p.comments) / (p.views as number)
-							: 0,
+					withViews.map((p) =>
+						p.views > 0 ? (p.likes + p.comments) / p.views : 0,
 					),
 				)
 			: null;
@@ -175,7 +189,7 @@ export function computeMetrics(profile: Profile, posts: Post[]): Metrics {
 
 	const metrics: Metrics = {
 		sampleSize: posts.length,
-		videoSampleSize: videos.length,
+		videoSampleSize: withViews.length,
 		avgLikes,
 		medianLikes: median(likes),
 		avgComments,
@@ -185,7 +199,7 @@ export function computeMetrics(profile: Profile, posts: Post[]): Metrics {
 		engagementRate,
 		engagementPerView,
 		postsPerWeek: postsPerWeek(posts),
-		videoShare: posts.length > 0 ? videos.length / posts.length : 0,
+		videoShare: posts.length > 0 ? videoPosts.length / posts.length : 0,
 		topPost,
 		topHashtags: topHashtags(posts),
 	};

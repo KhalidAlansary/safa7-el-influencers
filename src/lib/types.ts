@@ -20,7 +20,7 @@ export interface Post {
 }
 
 /** Follower-count tier, used for friendly labelling and benchmark comparisons. */
-export type Tier = "nano" | "micro" | "mid" | "macro" | "mega";
+export type Tier = "nano" | "micro" | "mid" | "macro" | "mega" | "celebrity";
 
 /** Everything we know about the account itself. */
 export interface Profile {
@@ -74,8 +74,10 @@ export interface Metrics {
 export interface Verdict {
 	tier: Tier;
 	tierLabel: string;
-	/** e.g. "Strong", "Solid", "Average", "Low" — a word for the engagement rate. */
+	/** Size-relative phrase, e.g. "Above average for its size". */
 	engagementLabel: string;
+	/** Drives the colour of the engagement number. */
+	engagementTone: "good" | "ok" | "weak";
 	/** One or two sentences summarizing the account as a marketing partner. */
 	summary: string;
 	/** Short bullet-style positives. */

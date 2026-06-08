@@ -40,7 +40,9 @@ async function getKV(): Promise<KVLike | null> {
 	}
 }
 
-const keyFor = (username: string) => `stats:v1:${username}`;
+// Bump the version when the computed shape/logic changes, to invalidate
+// previously-cached results (v2: fixed view-count handling in metrics).
+const keyFor = (username: string) => `stats:v2:${username}`;
 
 export async function cacheGet(
 	username: string,

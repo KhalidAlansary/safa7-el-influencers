@@ -1,5 +1,5 @@
 <script lang="ts">
-import { asOf, compact, full } from "$lib/format";
+import { asOf, compact, full, pct } from "$lib/format";
 import { getInfluencerStats } from "./influencer.remote";
 
 let username = $state("");
@@ -55,17 +55,37 @@ function readError(err: unknown): { title: string; hint: string } {
 }
 
 const engagementColor: Record<string, string> = {
-	Strong: "text-emerald-600",
-	Solid: "text-green-600",
-	Average: "text-amber-600",
-	Low: "text-rose-600",
+	good: "text-emerald-600",
+	ok: "text-slate-700",
+	weak: "text-amber-600",
 };
 </script>
 
-{#snippet stat(label: string, value: string, hint?: string)}
+{#snippet info(text: string)}
+	<span class="group relative ml-1 inline-flex align-middle">
+		<button
+			type="button"
+			aria-label="What does this mean?"
+			class="flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold leading-none text-slate-600 hover:bg-slate-300"
+		>
+			i
+		</button>
+		<span
+			class="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-56 -translate-x-1/2 rounded-lg bg-slate-800 px-3 py-2 text-left text-xs font-normal leading-snug text-white shadow-lg group-hover:block group-focus-within:block"
+			>{text}</span
+		>
+	</span>
+{/snippet}
+
+{#snippet stat(label: string, value: string, hint?: string, tip?: string)}
 	<div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
 		<div class="text-2xl font-bold text-slate-900">{value}</div>
-		<div class="mt-1 text-sm font-medium text-slate-600">{label}</div>
+		<div class="mt-1 flex items-center text-sm font-medium text-slate-600">
+			{label}
+			{#if tip}
+				{@render info(tip)}
+			{/if}
+		</div>
 		{#if hint}
 			<div class="mt-0.5 text-xs text-slate-400">{hint}</div>
 		{/if}
@@ -149,9 +169,12 @@ const engagementColor: Record<string, string> = {
 					</div>
 					<p class="text-slate-500">@{s.profile.username}</p>
 					<p
-						class="mt-1 inline-block rounded-full bg-indigo-50 px-3 py-0.5 text-xs font-medium text-indigo-700"
+						class="mt-1 inline-flex items-center rounded-full bg-indigo-50 px-3 py-0.5 text-xs font-medium text-indigo-700"
 					>
 						{s.verdict.tierLabel}
+						{@render info(
+							"Based on follower count: nano (under 10K), micro (under 100K), mid (under 500K), macro (under 1M), mega (under 10M), celebrity (10M+). Smaller accounts usually have higher engagement %.",
+						)}
 					</p>
 				</div>
 				<div class="flex gap-6 sm:ml-auto">
@@ -179,14 +202,14 @@ const engagementColor: Record<string, string> = {
 					<div class="mt-4 grid gap-4 sm:grid-cols-2">
 						{#if s.verdict.strengths.length}
 							<ul class="space-y-1 text-sm text-slate-600">
-								{#each s.verdict.strengths as str}
+								{#each s.verdict.strengths as str (str)}
 									<li>✅ {str}</li>
 								{/each}
 							</ul>
 						{/if}
 						{#if s.verdict.cautions.length}
 							<ul class="space-y-1 text-sm text-slate-600">
-								{#each s.verdict.cautions as caution}
+								{#each s.verdict.cautions as caution (caution)}
 									<li>⚠️ {caution}</li>
 								{/each}
 							</ul>
@@ -201,28 +224,44 @@ const engagementColor: Record<string, string> = {
 					"Typical views / video",
 					s.metrics.medianViews != null ? compact(s.metrics.medianViews) : "—",
 					s.metrics.videoSampleSize > 0
-						? `across ${s.metrics.videoSampleSize} recent videos`
+						? `${s.metrics.avgViews != null ? `avg ${compact(s.metrics.avgViews)} · ` : ""}across ${s.metrics.videoSampleSize} videos`
 						: "no recent videos",
+					"The middle (median) view count across recent videos — half got more, half fewer. We use the median so one viral video doesn't skew it. 'avg' is the plain average, shown for comparison.",
 				)}
-				{@render stat("Typical likes / post", compact(s.metrics.medianLikes))}
-				{@render stat("Typical comments / post", compact(s.metrics.medianComments))}
+				{@render stat(
+					"Typical likes / post",
+					compact(s.metrics.medianLikes),
+					undefined,
+					"The median (middle) number of likes across the recent posts we sampled — half got more, half fewer.",
+				)}
+				{@render stat(
+					"Typical comments / post",
+					compact(s.metrics.medianComments),
+					undefined,
+					"The median (middle) number of comments across the recent posts we sampled.",
+				)}
 				<div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
 					<div
-						class="text-2xl font-bold {engagementColor[s.verdict.engagementLabel] ?? 'text-slate-900'}"
+						class="text-2xl font-bold {engagementColor[s.verdict.engagementTone] ?? 'text-slate-900'}"
 					>
-						{s.metrics.engagementRate.toFixed(1)}%
+						{pct(s.metrics.engagementRate)}
 					</div>
-					<div class="mt-1 text-sm font-medium text-slate-600">
-						Engagement rate
+					<div
+						class="mt-1 flex items-center text-sm font-medium text-slate-600"
+					>
+						Engagement rate{@render info(
+							"Likes + comments per post, as a share of followers. Big accounts naturally have a much lower %, so we rate it against what's typical for an account of this size — not a fixed bar.",
+						)}
 					</div>
 					<div class="mt-0.5 text-xs text-slate-400">
 						{s.verdict.engagementLabel}
-						for this size
 					</div>
 				</div>
 				{@render stat(
 					"Posts / week",
 					s.metrics.postsPerWeek > 0 ? s.metrics.postsPerWeek.toFixed(1) : "—",
+					undefined,
+					"How often they post, estimated from the dates of the recent posts we looked at.",
 				)}
 			</div>
 
@@ -273,7 +312,7 @@ const engagementColor: Record<string, string> = {
 						Most-used hashtags
 					</h3>
 					<div class="flex flex-wrap gap-2">
-						{#each s.metrics.topHashtags as h}
+						{#each s.metrics.topHashtags as h (h.tag)}
 							<span
 								class="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700"
 							>
@@ -290,6 +329,37 @@ const engagementColor: Record<string, string> = {
 				· as of {asOf(s.fetchedAt)}
 				{s.cached ? " · cached" : ""}
 			</p>
+
+			<details class="mx-auto max-w-xl text-xs text-slate-500">
+				<summary
+					class="cursor-pointer text-center text-slate-400 hover:text-slate-600"
+				>
+					How are these numbers calculated?
+				</summary>
+				<div class="mt-3 space-y-2 rounded-xl bg-slate-50 p-4">
+					<p>
+						We pull this account's last {s.metrics.sampleSize} public posts from
+						Instagram and crunch the numbers — no guesswork.
+					</p>
+					<p>
+						<strong>"Typical" values are medians</strong>
+						(the middle value), not averages, so a single viral post doesn't
+						distort them. Where it helps, we also show the average.
+					</p>
+					<p>
+						<strong>Engagement rate</strong>
+						= (average likes + average comments) ÷ followers. Because engagement
+						% drops sharply as accounts grow, we rate it
+						<strong>relative to other accounts of a similar size</strong>
+						rather than against one fixed target.
+					</p>
+					<p>
+						<strong>View counts</strong>
+						only exist on videos and reels, so photo-only accounts won't show a
+						"typical views" number.
+					</p>
+				</div>
+			</details>
 		</section>
 	{/if}
 </main>
