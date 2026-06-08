@@ -16,7 +16,8 @@
 	"packageManager": "pnpm@11.3.0",
 	"dependencies": {
 		"sst": "4.15.2",
-		"svelte-kit-sst": "2.43.5"
+		"svelte-kit-sst": "2.43.5",
+		"valibot": "^1.4.1"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.16",

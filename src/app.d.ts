@@ -2,11 +2,15 @@
 // for information about these interfaces
 declare global {
 	namespace App {
-		// interface Error {}
+		interface Error {
+			message: string;
+			/** Stable, machine-readable cause so the UI can show a tailored message. */
+			code?: string;
+		}
 		// interface Locals {}
 		// interface PageData {}
 		// interface PageState {}
-		// interface Platform {}
+		// `Platform` (with `env`) is declared ambiently by @sveltejs/adapter-cloudflare.
 	}
 }
 

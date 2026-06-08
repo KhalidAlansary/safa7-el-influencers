@@ -17,5 +17,17 @@
 		"formatter": {
 			"enabled": true
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.svelte"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noUnusedFunctionParameters": "off"
+					}
+				}
+			}
+		}
+	]
 }

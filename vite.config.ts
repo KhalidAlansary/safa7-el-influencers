@@ -14,6 +14,10 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes("node_modules") ? undefined : true,
 			},
 			adapter: adapter(),
+			experimental: {
+				// Enables `query`/`form`/`command` in *.remote.ts for client<->worker comms.
+				remoteFunctions: true,
+			},
 		}),
 	],
 });

@@ -17,6 +17,11 @@ export default $config({
 			assets: { directory: ".svelte-kit/cloudflare" },
 			handler: ".svelte-kit/cloudflare/_worker.js",
 			link: [kv],
+			// Exposed on the worker as `platform.env.APIFY_TOKEN`. Sourced from the
+			// local environment / .env (SST loads .env into process.env).
+			environment: {
+				APIFY_TOKEN: process.env.APIFY_TOKEN ?? "",
+			},
 			compatibility: { date: "2026-06-08" },
 			url: true,
 			transform: {
