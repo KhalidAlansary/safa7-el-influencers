@@ -18,6 +18,9 @@ importers:
       '@biomejs/biome':
         specifier: 2.4.16
         version: 2.4.16
+      '@cloudflare/workers-types':
+        specifier: ^4.20260606.1
+        version: 4.20260606.1
       '@sveltejs/adapter-cloudflare':
         specifier: ^7.2.8
         version: 7.2.8(@sveltejs/kit@3.0.0-next.1(@sveltejs/vite-plugin-svelte@7.1.2(svelte@5.56.2)(vite@8.0.16(@types/node@25.9.2)(esbuild@0.27.3)))(svelte@5.56.2)(typescript@6.0.3)(vite@8.0.16(@types/node@25.9.2)(esbuild@0.27.3)))(wrangler@4.98.0(@cloudflare/workers-types@4.20260606.1))
